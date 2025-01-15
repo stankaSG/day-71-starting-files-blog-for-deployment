@@ -11,7 +11,15 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 # Optional: add contact me email functionality (Day 60)
-# import smtplib
+import smtplib
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+MY_EMAIL = os.environ.get('ADMIN_EMAIL')
+MY_PASSWORD = os.environ.get('ADMIN_PASS')
 
 
 '''
@@ -29,7 +37,7 @@ This will install the packages from the requirements.txt for this project.
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_KEY')
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -56,7 +64,7 @@ gravatar = Gravatar(app,
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URL')
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -270,9 +278,27 @@ def about():
     return render_template("about.html", current_user=current_user)
 
 
-@app.route("/contact", methods=["GET", "POST"])
+@app.route('/contact', methods=['GET', 'POST'])
 def contact():
-    return render_template("contact.html", current_user=current_user)
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        phone = request.form['phone']
+        message = request.form['message']
+        forms = "success"
+        email_message = f"Name: {name}\nEmail: {email}\nPhone number: {phone}\nMessage: {message}"
+        print(email_message)
+        with smtplib.SMTP("smtp.gmail.com") as connection:
+            connection.starttls()
+            connection.login(user=MY_EMAIL, password=MY_PASSWORD)
+            connection.sendmail(
+                from_addr=MY_EMAIL,
+                to_addrs=MY_EMAIL,
+                msg=f"Subject:Message from webpage: Studio SG\n\n{email_message}"
+            )
+        return render_template("contact.html", formular=forms)
+    else:
+        return render_template("contact.html", current_user=current_user)
 
 # Optional: You can include the email sending code from Day 60:
 # DON'T put your email and password here directly! The code will be visible when you upload to Github.
@@ -299,4 +325,4 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=False)
